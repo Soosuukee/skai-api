@@ -1,0 +1,285 @@
+<?php
+
+namespace App\Entity;
+
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Put;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Doctrine\Orm\Filter\OrderFilter;
+use ApiPlatform\Serializer\Filter\GroupFilter;
+use App\Repository\ClientRepository;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
+
+#[ORM\Entity(repositoryClass: ClientRepository::class)]
+#[ApiResource(
+    operations: [
+        new Get(),
+        new GetCollection(),
+        new Post(),
+        new Put(
+            security: "is_granted('ROLE_ADMIN') or object == user"
+        ),
+        new Patch(
+            denormalizationContext: ['groups' => ['client:patch']],
+            security: "is_granted('ROLE_ADMIN') or object == user"
+        ),
+        new Delete(
+            security: "is_granted('ROLE_ADMIN') or object == user"
+        ),
+    ],
+    normalizationContext: ['groups' => ['client:read']],
+    denormalizationContext: ['groups' => ['client:write']]
+)]
+#[SearchFilter(['firstName' => 'partial', 'lastName' => 'partial', 'email' => 'partial', 'city' => 'partial', 'country.name' => 'partial'])]
+#[OrderFilter(['firstName', 'lastName', 'email', 'joinedAt'])]
+class Client implements UserInterface, PasswordAuthenticatedUserInterface
+{
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
+    #[Groups(['client:read'])]
+    private ?int $id = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['client:read', 'client:write'])]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 2, max: 255)]
+    #[Assert\Regex(pattern: '/^[\p{L} ]+$/u', message: 'Le prénom ne doit contenir que des lettres et des espaces')]
+    private ?string $firstName = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['client:read', 'client:write'])]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 2, max: 255)]
+    #[Assert\Regex(pattern: '/^[\p{L} ]+$/u', message: 'Le nom ne doit contenir que des lettres et des espaces')]
+    private ?string $lastName = null;
+
+    #[ORM\Column(length: 255, unique: true)]
+    #[Groups(['client:read', 'client:write'])]
+    #[Assert\NotBlank]
+    #[Assert\Email]
+    #[Assert\Length(max: 255)]
+    private ?string $email = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['client:write', 'client:patch'])]
+    #[Assert\NotBlank(groups: ['client:write'])]
+    #[Assert\Length(min: 8, max: 255, minMessage: 'Le mot de passe doit contenir au moins 8 caractères')]
+    #[Assert\Regex(pattern: '/^(?=.*[A-Za-z])(?=.*\d).+$/', message: 'Le mot de passe doit contenir au moins une lettre et un chiffre')]
+    private ?string $password = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['client:read', 'client:write'])]
+    private ?string $profilePicture = null;
+
+    #[ORM\Column]
+    #[Groups(['client:read'])]
+    private ?\DateTimeImmutable $joinedAt = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['client:read'])]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 255)]
+    #[Assert\Regex(pattern: '/^[a-z0-9-]+$/', message: 'Le slug ne doit contenir que des lettres minuscules, des chiffres et des tirets (-)')]
+    private ?string $slug = null;
+
+    #[ORM\ManyToOne(targetEntity: Country::class)]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['client:read', 'client:write'])]
+    private ?Country $country = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['client:read', 'client:write'])]
+    private ?string $city = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['client:read', 'client:write'])]
+    private ?string $state = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['client:read', 'client:write'])]
+    private ?string $postalCode = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['client:read', 'client:write'])]
+    private ?string $address = null;
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getFirstName(): ?string
+    {
+        return $this->firstName;
+    }
+
+    public function setFirstName(string $firstName): static
+    {
+        $this->firstName = $firstName;
+
+        return $this;
+    }
+
+    public function getLastName(): ?string
+    {
+        return $this->lastName;
+    }
+
+    public function setLastName(string $lastName): static
+    {
+        $this->lastName = $lastName;
+
+        return $this;
+    }
+
+    public function getEmail(): ?string
+    {
+        return $this->email;
+    }
+
+    public function setEmail(string $email): static
+    {
+        $this->email = $email;
+
+        return $this;
+    }
+
+    public function getPassword(): ?string
+    {
+        return $this->password;
+    }
+
+    public function setPassword(string $password): static
+    {
+        $this->password = $password;
+
+        return $this;
+    }
+
+    public function getProfilePicture(): ?string
+    {
+        return $this->profilePicture;
+    }
+
+    public function setProfilePicture(string $profilePicture): static
+    {
+        $this->profilePicture = $profilePicture;
+
+        return $this;
+    }
+
+    public function getJoinedAt(): ?\DateTimeImmutable
+    {
+        return $this->joinedAt;
+    }
+
+    public function setJoinedAt(\DateTimeImmutable $joinedAt): static
+    {
+        $this->joinedAt = $joinedAt;
+
+        return $this;
+    }
+
+    public function getSlug(): ?string
+    {
+        return $this->slug;
+    }
+
+    public function setSlug(string $slug): static
+    {
+        $this->slug = $slug;
+
+        return $this;
+    }
+
+    public function getCountry(): ?Country
+    {
+        return $this->country;
+    }
+
+    public function setCountry(?Country $country): static
+    {
+        $this->country = $country;
+
+        return $this;
+    }
+
+    public function getCity(): ?string
+    {
+        return $this->city;
+    }
+
+    public function setCity(string $city): static
+    {
+        $this->city = $city;
+
+        return $this;
+    }
+
+    public function getState(): ?string
+    {
+        return $this->state;
+    }
+
+    public function setState(string $state): static
+    {
+        $this->state = $state;
+
+        return $this;
+    }
+
+    public function getPostalCode(): ?string
+    {
+        return $this->postalCode;
+    }
+
+    public function setPostalCode(string $postalCode): static
+    {
+        $this->postalCode = $postalCode;
+
+        return $this;
+    }
+
+    public function getAddress(): ?string
+    {
+        return $this->address;
+    }
+
+    public function setAddress(string $address): static
+    {
+        $this->address = $address;
+
+        return $this;
+    }
+
+    public function getRole(): string
+    {
+        return 'client';
+    }
+
+    // Méthodes requises par UserInterface
+    public function getRoles(): array
+    {
+        return ['ROLE_CLIENT'];
+    }
+
+    public function getUserIdentifier(): string
+    {
+        return $this->email;
+    }
+
+    public function eraseCredentials(): void
+    {
+        // Si vous stockez des données sensibles temporaires, les effacer ici
+    }
+}

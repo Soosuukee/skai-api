@@ -1,0 +1,29 @@
+nelmio_cors:
+  defaults:
+    origin_regex: true
+    allow_origin: ["*"] # En production, remplacer par les domaines autorisés
+    allow_methods: ["GET", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"]
+    allow_headers:
+      [
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Accept",
+        "Origin",
+        "Cache-Control",
+        "X-File-Name",
+      ]
+    expose_headers: ["Link", "X-Total-Count", "X-Page-Count"]
+    max_age: 3600
+    allow_credentials: true
+  paths:
+    "^/api/":
+      allow_origin: ["*"]
+      allow_headers: ["*"]
+      allow_methods: ["GET", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"]
+      max_age: 3600
+    "^/":
+      allow_origin: ["*"]
+      allow_headers: ["Content-Type", "Authorization"]
+      allow_methods: ["GET", "OPTIONS", "POST"]
+      max_age: 3600
