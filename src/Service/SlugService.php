@@ -6,9 +6,9 @@ namespace App\Service;
 
 class SlugService
 {
-    /**
-     * Génère un slug à partir d'un texte
-     */
+
+    // Génère un slug à partir d'un texte
+
     public function slugify(string $text): string
     {
         // Supprimer les accents
@@ -29,9 +29,9 @@ class SlugService
         return $text;
     }
 
-    /**
-     * Génère un slug unique en ajoutant un suffixe numérique si nécessaire
-     */
+
+    //Génère un slug unique en ajoutant un suffixe numérique si nécessaire
+
     public function generateUniqueSlug(string $baseSlug, callable $checkSlugExists, int $maxAttempts = 100): string
     {
         $slug = $baseSlug;
@@ -49,9 +49,8 @@ class SlugService
         return $slug;
     }
 
-    /**
-     * Supprime les accents d'une chaîne
-     */
+    // Supprime les accents d'une chaîne
+
     private function removeAccents(string $text): string
     {
         $accents = [
@@ -110,18 +109,17 @@ class SlugService
         return strtr($text, $accents);
     }
 
-    /**
-     * Génère un ID court à partir d'un ID numérique
-     */
+
+    // Génère un ID court à partir d'un ID numérique
     public function generateShortId(int $id): string
     {
         // Convertir l'ID en base 36 pour obtenir une chaîne plus courte
         return base_convert((string) $id, 10, 36);
     }
 
-    /**
-     * Génère un ID aléatoire au format {lettre}{9 chiffres}
-     */
+
+    // Génère un ID aléatoire au format {lettre}{9 chiffres}
+
     public function generateRandomId(): string
     {
         // Générer une lettre aléatoire de A à Z
@@ -136,9 +134,9 @@ class SlugService
         return $letter . $digits;
     }
 
-    /**
-     * Génère un slug pour un nom complet (prénom-nom-id)
-     */
+
+    // Génère un slug pour un nom complet (prénom-nom-id)
+
     public function slugifyFullName(string $firstName, string $lastName, int $id): string
     {
         $firstNameSlug = $this->slugify($firstName);
@@ -148,9 +146,9 @@ class SlugService
         return $firstNameSlug . '-' . $lastNameSlug . '-' . $shortId;
     }
 
-    /**
-     * Génère un slug pour un nom complet avec ID aléatoire (prénom-nom-{lettre}{9 chiffres})
-     */
+
+    // Génère un slug pour un nom complet avec ID aléatoire (prénom-nom-{lettre}{9 chiffres})
+
     public function slugifyFullNameWithRandomId(string $firstName, string $lastName): string
     {
         $firstNameSlug = $this->slugify($firstName);
@@ -160,9 +158,9 @@ class SlugService
         return $firstNameSlug . '-' . $lastNameSlug . '-' . $randomId;
     }
 
-    /**
-     * Génère un slug pour un titre
-     */
+
+    // Génère un slug pour un titre
+
     public function slugifyTitle(string $title): string
     {
         return $this->slugify($title);

@@ -47,9 +47,7 @@ class ArticleSlugService
         );
     }
 
-    /**
-     * Met à jour le slug d'un article et le sauvegarde
-     */
+    // Met à jour le slug d'un article et le sauvegarde
     public function updateArticleSlug(Article $article): void
     {
         $slug = $this->generateUniqueSlug($article);
@@ -59,9 +57,7 @@ class ArticleSlugService
         $this->entityManager->flush();
     }
 
-    /**
-     * Génère un slug pour un nouvel article
-     */
+    //Génère un slug pour un nouvel article
     public function generateSlugForNewArticle(string $title): string
     {
         if (!$title) {
@@ -78,17 +74,17 @@ class ArticleSlugService
         );
     }
 
-    /**
-     * Met à jour le slug d'un article existant
-     */
+
+    //Met à jour le slug d'un article existant
+
     public function updateSlugForExistingArticle(Article $article): void
     {
         $this->updateArticleSlug($article);
     }
 
-    /**
-     * Génère un slug basé sur le titre et le nom du provider
-     */
+
+    // Génère un slug basé sur le titre et le nom du provider
+
     public function generateSlugWithProvider(string $title, string $providerFirstName, string $providerLastName): string
     {
         if (!$title) {
