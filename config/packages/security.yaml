@@ -40,9 +40,9 @@ security:
       provider: app_user_provider
       jwt: ~
 
-    # Firewall pour les routes d'authentification (publiques)
-    auth:
-      pattern: ^/api/v1/auth
+    # Routes d'authentification personnalisées (publiques)
+    auth_custom:
+      pattern: ^/api/v1/auth/(register|logout|me)
       security: false
 
   # Contrôle d'accès basé sur les rôles et chemins

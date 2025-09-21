@@ -28,7 +28,7 @@ class ClientSlugService
             throw new \InvalidArgumentException('Le prénom et le nom sont requis pour générer un slug');
         }
 
-        return $this->slugService->slugifyFullNameWithRandomId($firstName, $lastName);
+        return $this->slugService->slugifyUser($firstName, $lastName);
     }
 
     /**
@@ -36,10 +36,9 @@ class ClientSlugService
      */
     public function generateUniqueSlug(Client $client): string
     {
-        $baseSlug = $this->generateSlug($client);
-
-        return $this->slugService->generateUniqueSlug(
-            $baseSlug,
+        return $this->slugService->slugifyUser(
+            $client->getFirstName(),
+            $client->getLastName(),
             function (string $slug) {
                 return $this->clientRepository->findBySlug($slug) !== null;
             }
@@ -68,10 +67,9 @@ class ClientSlugService
         }
 
         // Générer un slug avec ID aléatoire
-        $baseSlug = $this->slugService->slugifyFullNameWithRandomId($firstName, $lastName);
-
-        return $this->slugService->generateUniqueSlug(
-            $baseSlug,
+        return $this->slugService->slugifyUser(
+            $firstName,
+            $lastName,
             function (string $slug) {
                 return $this->clientRepository->findBySlug($slug) !== null;
             }

@@ -6,7 +6,12 @@ namespace App\Controller;
 
 use App\Repository\ProviderRepository;
 use App\Repository\ClientRepository;
+use App\Repository\CountryRepository;
+use App\Repository\JobRepository;
 use App\Service\AuthService;
+use App\Entity\Provider;
+use App\Entity\Client;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,8 +25,11 @@ class AuthController extends AbstractController
     public function __construct(
         private ProviderRepository $providerRepository,
         private ClientRepository $clientRepository,
+        private CountryRepository $countryRepository,
+        private JobRepository $jobRepository,
         private UserPasswordHasherInterface $passwordHasher,
-        private AuthService $authService
+        private AuthService $authService,
+        private EntityManagerInterface $entityManager
     ) {}
 
     #[Route('/login', name: 'login', methods: ['POST'])]
@@ -58,7 +66,7 @@ class AuthController extends AbstractController
 
             // Générer le token JWT
             $token = $this->authService->generateToken($user);
-            $userType = $user instanceof \App\Entity\Provider ? 'provider' : 'client';
+            $userType = $user instanceof Provider ? 'provider' : 'client';
 
             $response = new JsonResponse([
                 'success' => true,
@@ -118,22 +126,59 @@ class AuthController extends AbstractController
                 ], Response::HTTP_BAD_REQUEST);
             }
 
+            // Get default country and job
+            $defaultCountry = $this->countryRepository->find(1); // First country
+            $defaultJob = $this->jobRepository->find(1); // First job
+
             // Create user based on type
             if ($userType === 'provider') {
-                // TODO: Create provider entity and save
-                $user = null; // Placeholder
+                $user = new Provider();
+                $user->setEmail($email);
+                $user->setFirstName($data['firstName'] ?? '');
+                $user->setLastName($data['lastName'] ?? '');
+                $user->setSlug(strtolower($data['firstName'] ?? '') . '-' . strtolower($data['lastName'] ?? ''));
+                $user->setJoinedAt(new \DateTimeImmutable());
+                $user->setCity($data['city'] ?? '');
+                $user->setState($data['state'] ?? '');
+                $user->setPostalCode($data['postalCode'] ?? '');
+                $user->setAddress($data['address'] ?? '');
+                $user->setCountry($defaultCountry);
+                $user->setJob($defaultJob);
             } else {
-                // TODO: Create client entity and save
-                $user = null; // Placeholder
+                $user = new Client();
+                $user->setEmail($email);
+                $user->setFirstName($data['firstName'] ?? '');
+                $user->setLastName($data['lastName'] ?? '');
+                $user->setSlug(strtolower($data['firstName'] ?? '') . '-' . strtolower($data['lastName'] ?? ''));
+                $user->setJoinedAt(new \DateTimeImmutable());
+                $user->setCity($data['city'] ?? '');
+                $user->setState($data['state'] ?? '');
+                $user->setPostalCode($data['postalCode'] ?? '');
+                $user->setAddress($data['address'] ?? '');
+                $user->setCountry($defaultCountry);
             }
 
-            // TODO: Generate JWT token or session
-            $token = 'jwt_token_here'; // This should be generated properly
+            // Hash password
+            $hashedPassword = $this->passwordHasher->hashPassword($user, $password);
+            $user->setPassword($hashedPassword);
+
+            // Save user to database
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
+
+            // Generate JWT token
+            $token = $this->authService->generateToken($user);
 
             return new JsonResponse([
                 'success' => true,
                 'data' => [
-                    'user' => $user,
+                    'user' => [
+                        'id' => $user->getId(),
+                        'email' => $user->getEmail(),
+                        'firstName' => $user->getFirstName(),
+                        'lastName' => $user->getLastName(),
+                        'type' => $userType
+                    ],
                     'token' => $token,
                     'userType' => $userType
                 ],
@@ -170,7 +215,7 @@ class AuthController extends AbstractController
         }
 
         // Retourner les infos complètes selon le type d'utilisateur
-        if ($user instanceof \App\Entity\Provider) {
+        if ($user instanceof Provider) {
             $userData = [
                 'id' => $user->getId(),
                 'firstName' => $user->getFirstName(),
@@ -179,8 +224,8 @@ class AuthController extends AbstractController
                 'profilePicture' => $user->getProfilePicture(),
                 'joinedAt' => $user->getJoinedAt()?->format('c'),
                 'slug' => $user->getSlug(),
-                'jobId' => $user->getJobId(),
-                'countryId' => $user->getCountryId(),
+                'jobId' => $user->getJob()?->getId(),
+                'countryId' => $user->getCountry()?->getId(),
                 'city' => $user->getCity(),
                 'state' => $user->getState(),
                 'postalCode' => $user->getPostalCode(),
@@ -190,7 +235,7 @@ class AuthController extends AbstractController
                 'languages' => $user->getLanguages()->map(fn($l) => $l->getName())->toArray(),
                 'role' => 'provider'
             ];
-        } elseif ($user instanceof \App\Entity\Client) {
+        } elseif ($user instanceof Client) {
             $userData = [
                 'id' => $user->getId(),
                 'firstName' => $user->getFirstName(),
@@ -199,7 +244,7 @@ class AuthController extends AbstractController
                 'profilePicture' => $user->getProfilePicture(),
                 'joinedAt' => $user->getJoinedAt()?->format('c'),
                 'slug' => $user->getSlug(),
-                'countryId' => $user->getCountryIdForRead(),
+                'countryId' => $user->getCountry()?->getId(),
                 'city' => $user->getCity(),
                 'state' => $user->getState(),
                 'postalCode' => $user->getPostalCode(),
