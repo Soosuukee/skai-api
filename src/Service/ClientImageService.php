@@ -33,6 +33,6 @@ class ClientImageService
         $dest = $baseDir . '/profile-picture.' . $extension;
         copy($source, $dest);
 
-        return '/api/v1/images/clients/' . $clientId . '/profile/profile-picture.' . $extension;
+        return '/images/clients/' . $clientId . '/profile/profile-picture.' . $extension;
     }
 }

@@ -16,7 +16,6 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
-use Symfony\Component\Serializer\Annotation\SerializedName;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -28,17 +27,17 @@ use Symfony\Component\Security\Core\User\UserInterface;
         new GetCollection(),
         new Post(),
         new Put(
-            security: "is_granted('ROLE_ADMIN') or object == user"
+            security: "object == user"
         ),
         new Patch(
             denormalizationContext: ['groups' => ['provider:patch']],
-            security: "is_granted('ROLE_ADMIN') or object == user"
+            security: "object == user"
         ),
         new Delete(
-            security: "is_granted('ROLE_ADMIN') or object == user"
+            security: "object == user"
         ),
     ],
-    normalizationContext: ['groups' => ['provider:read'], 'iri_only' => false],
+    normalizationContext: ['groups' => ['provider:read']],
     denormalizationContext: ['groups' => ['provider:write']]
 )]
 #[SearchFilter(['firstName' => 'partial', 'lastName' => 'partial', 'email' => 'partial', 'city' => 'partial', 'country.name' => 'partial', 'job.title' => 'partial', 'languages.name' => 'partial', 'hardSkills.title' => 'partial', 'softSkills.title' => 'partial'])]
@@ -81,14 +80,13 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['provider:read', 'provider:write'])]
-    #[Assert\Url]
     private ?string $profilePicture = null;
 
     #[ORM\Column]
     #[Groups(['provider:read'])]
     private ?\DateTimeImmutable $joinedAt = null;
 
-    #[ORM\Column(length: 255, unique: true)]
+    #[ORM\Column(length: 255)]
     #[Groups(['provider:read'])]
     #[Assert\NotBlank]
     #[Assert\Length(max: 255)]
@@ -97,54 +95,74 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\ManyToOne(targetEntity: Job::class)]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['provider:write'])]
+    #[Groups(['provider:read', 'provider:write'])]
     #[Assert\NotNull]
     private ?Job $job = null;
 
     #[ORM\ManyToOne(targetEntity: Country::class)]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['provider:write'])]
+    #[Groups(['provider:read', 'provider:write'])]
     #[Assert\NotNull]
     private ?Country $country = null;
 
     #[ORM\Column(length: 255)]
     #[Groups(['provider:read', 'provider:write'])]
-    #[Assert\NotBlank]
-    #[Assert\Length(min: 2, max: 255)]
     private ?string $city = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(length: 255)]
     #[Groups(['provider:read', 'provider:write'])]
-    #[Assert\Length(max: 255)]
     private ?string $state = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(length: 255)]
     #[Groups(['provider:read', 'provider:write'])]
-    #[Assert\Length(max: 20)]
     private ?string $postalCode = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(length: 255)]
     #[Groups(['provider:read', 'provider:write'])]
-    #[Assert\Length(max: 255)]
     private ?string $address = null;
 
-    #[ORM\ManyToMany(targetEntity: HardSkill::class, mappedBy: 'providers')]
+    #[ORM\Column(type: 'date', nullable: true)]
+    #[Groups(['provider:read', 'provider:write'])]
+    #[Assert\LessThan('today', message: 'La date de naissance ne peut pas être dans le futur')]
+    #[Assert\LessThanOrEqual(
+        value: '-18 years',
+        message: 'Vous devez avoir au moins 18 ans'
+    )]
+    private ?\DateTimeInterface $birthDate = null;
+
+    #[ORM\ManyToMany(targetEntity: HardSkill::class, inversedBy: 'providers')]
     #[Groups(['provider:read', 'provider:write'])]
     private Collection $hardSkills;
 
-    #[ORM\ManyToMany(targetEntity: SoftSkill::class, mappedBy: 'providers')]
+    #[ORM\ManyToMany(targetEntity: SoftSkill::class, inversedBy: 'providers')]
     #[Groups(['provider:read', 'provider:write'])]
     private Collection $softSkills;
 
-    #[ORM\ManyToMany(targetEntity: Language::class, mappedBy: 'providers')]
+    #[ORM\ManyToMany(targetEntity: Language::class, inversedBy: 'providers')]
     #[Groups(['provider:read', 'provider:write'])]
     private Collection $languages;
+
+    #[ORM\OneToMany(mappedBy: 'provider', targetEntity: Service::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $services;
+
+    #[ORM\OneToMany(mappedBy: 'provider', targetEntity: Article::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $articles;
+
+    #[ORM\OneToMany(mappedBy: 'provider', targetEntity: AvailabilitySlot::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $availabilitySlots;
+
+    #[ORM\OneToMany(mappedBy: 'provider', targetEntity: SocialLink::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $socialLinks;
 
     public function __construct()
     {
         $this->hardSkills = new ArrayCollection();
         $this->softSkills = new ArrayCollection();
         $this->languages = new ArrayCollection();
+        $this->services = new ArrayCollection();
+        $this->articles = new ArrayCollection();
+        $this->availabilitySlots = new ArrayCollection();
+        $this->socialLinks = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -248,13 +266,6 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    #[Groups(['provider:read'])]
-    #[SerializedName('job')]
-    public function getJobForRead(): ?string
-    {
-        return $this->job?->getTitle();
-    }
-
     public function getCountry(): ?Country
     {
         return $this->country;
@@ -265,13 +276,6 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
         $this->country = $country;
 
         return $this;
-    }
-
-    #[Groups(['provider:read'])]
-    #[SerializedName('country')]
-    public function getCountryForRead(): ?string
-    {
-        return $this->country?->getName();
     }
 
     public function getCity(): ?string
@@ -322,6 +326,18 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function getBirthDate(): ?\DateTimeInterface
+    {
+        return $this->birthDate;
+    }
+
+    public function setBirthDate(?\DateTimeInterface $birthDate): static
+    {
+        $this->birthDate = $birthDate;
+
+        return $this;
+    }
+
     /**
      * @return Collection<int, HardSkill>
      */
@@ -334,7 +350,6 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if (!$this->hardSkills->contains($hardSkill)) {
             $this->hardSkills->add($hardSkill);
-            $hardSkill->addProvider($this);
         }
 
         return $this;
@@ -342,9 +357,7 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function removeHardSkill(HardSkill $hardSkill): static
     {
-        if ($this->hardSkills->removeElement($hardSkill)) {
-            $hardSkill->removeProvider($this);
-        }
+        $this->hardSkills->removeElement($hardSkill);
 
         return $this;
     }
@@ -361,7 +374,6 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if (!$this->softSkills->contains($softSkill)) {
             $this->softSkills->add($softSkill);
-            $softSkill->addProvider($this);
         }
 
         return $this;
@@ -369,9 +381,7 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function removeSoftSkill(SoftSkill $softSkill): static
     {
-        if ($this->softSkills->removeElement($softSkill)) {
-            $softSkill->removeProvider($this);
-        }
+        $this->softSkills->removeElement($softSkill);
 
         return $this;
     }
@@ -388,7 +398,6 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if (!$this->languages->contains($language)) {
             $this->languages->add($language);
-            $language->addProvider($this);
         }
 
         return $this;
@@ -396,19 +405,138 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function removeLanguage(Language $language): static
     {
-        if ($this->languages->removeElement($language)) {
-            $language->removeProvider($this);
+        $this->languages->removeElement($language);
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Service>
+     */
+    public function getServices(): Collection
+    {
+        return $this->services;
+    }
+
+    public function addService(Service $service): static
+    {
+        if (!$this->services->contains($service)) {
+            $this->services->add($service);
+            $service->setProvider($this);
         }
 
         return $this;
     }
 
+    public function removeService(Service $service): static
+    {
+        if ($this->services->removeElement($service)) {
+            // set the owning side to null (unless already changed)
+            if ($service->getProvider() === $this) {
+                $service->setProvider(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Article>
+     */
+    public function getArticles(): Collection
+    {
+        return $this->articles;
+    }
+
+    public function addArticle(Article $article): static
+    {
+        if (!$this->articles->contains($article)) {
+            $this->articles->add($article);
+            $article->setProvider($this);
+        }
+
+        return $this;
+    }
+
+    public function removeArticle(Article $article): static
+    {
+        if ($this->articles->removeElement($article)) {
+            // set the owning side to null (unless already changed)
+            if ($article->getProvider() === $this) {
+                $article->setProvider(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, AvailabilitySlot>
+     */
+    public function getAvailabilitySlots(): Collection
+    {
+        return $this->availabilitySlots;
+    }
+
+    public function addAvailabilitySlot(AvailabilitySlot $availabilitySlot): static
+    {
+        if (!$this->availabilitySlots->contains($availabilitySlot)) {
+            $this->availabilitySlots->add($availabilitySlot);
+            $availabilitySlot->setProvider($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAvailabilitySlot(AvailabilitySlot $availabilitySlot): static
+    {
+        if ($this->availabilitySlots->removeElement($availabilitySlot)) {
+            // set the owning side to null (unless already changed)
+            if ($availabilitySlot->getProvider() === $this) {
+                $availabilitySlot->setProvider(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, SocialLink>
+     */
+    public function getSocialLinks(): Collection
+    {
+        return $this->socialLinks;
+    }
+
+    public function addSocialLink(SocialLink $socialLink): static
+    {
+        if (!$this->socialLinks->contains($socialLink)) {
+            $this->socialLinks->add($socialLink);
+            $socialLink->setProvider($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSocialLink(SocialLink $socialLink): static
+    {
+        if ($this->socialLinks->removeElement($socialLink)) {
+            // set the owning side to null (unless already changed)
+            if ($socialLink->getProvider() === $this) {
+                $socialLink->setProvider(null);
+            }
+        }
+
+        return $this;
+    }
+
+
+    #[Groups(['provider:read'])]
     public function getRole(): string
     {
         return 'provider';
     }
 
-    // Méthodes requises par UserInterface
     public function getRoles(): array
     {
         return ['ROLE_PROVIDER'];

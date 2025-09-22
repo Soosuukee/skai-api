@@ -16,9 +16,7 @@ class ProviderSlugService
         private EntityManagerInterface $entityManager
     ) {}
 
-    /**
-     * Génère un slug pour un provider au format firstname-lastname-{lettre}{9 chiffres}
-     */
+    // Génère un slug unique pour un provider
     public function generateSlug(Provider $provider): string
     {
         $firstName = $provider->getFirstName();
@@ -28,65 +26,38 @@ class ProviderSlugService
             throw new \InvalidArgumentException('Le prénom et le nom sont requis pour générer un slug');
         }
 
-        return $this->slugService->slugifyFullNameWithRandomId($firstName, $lastName);
-    }
-
-    /**
-     * Génère un slug unique pour un provider
-     */
-    public function generateUniqueSlug(Provider $provider): string
-    {
-        $baseSlug = $this->generateSlug($provider);
-
-        return $this->slugService->generateUniqueSlug(
-            $baseSlug,
+        return $this->slugService->slugifyUser(
+            $firstName,
+            $lastName,
             function (string $slug) {
                 return $this->providerRepository->findBySlug($slug) !== null;
             }
         );
     }
 
-    /**
-     * Met à jour le slug d'un provider et le sauvegarde
-     */
+    // Met à jour le slug d'un provider et le sauvegarde
     public function updateProviderSlug(Provider $provider): void
     {
-        $slug = $this->generateUniqueSlug($provider);
+        $slug = $this->generateSlug($provider);
         $provider->setSlug($slug);
 
         $this->entityManager->persist($provider);
         $this->entityManager->flush();
     }
 
-    /**
-     * Génère un slug pour un nouveau provider (avant la sauvegarde)
-     */
+    // Génère un slug pour un nouveau provider (avant la sauvegarde)
     public function generateSlugForNewProvider(string $firstName, string $lastName): string
     {
         if (!$firstName || !$lastName) {
             throw new \InvalidArgumentException('Le prénom et le nom sont requis pour générer un slug');
         }
 
-        // Générer un slug avec ID aléatoire
-        $baseSlug = $this->slugService->slugifyFullNameWithRandomId($firstName, $lastName);
-
-        return $this->slugService->generateUniqueSlug(
-            $baseSlug,
+        return $this->slugService->slugifyUser(
+            $firstName,
+            $lastName,
             function (string $slug) {
                 return $this->providerRepository->findBySlug($slug) !== null;
             }
         );
-    }
-
-    /**
-     * Met à jour le slug d'un provider existant avec son ID
-     */
-    public function updateSlugWithId(Provider $provider): void
-    {
-        if (!$provider->getId()) {
-            throw new \InvalidArgumentException('Le provider doit avoir un ID pour mettre à jour le slug');
-        }
-
-        $this->updateProviderSlug($provider);
     }
 }

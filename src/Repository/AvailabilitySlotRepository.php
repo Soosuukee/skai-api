@@ -25,15 +25,18 @@ class AvailabilitySlotRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findAvailableSlots(int $providerId): array
+    public function findAvailableSlots(int $providerId = null): array
     {
-        return $this->createQueryBuilder('a')
-            ->andWhere('a.provider = :providerId')
+        $qb = $this->createQueryBuilder('a')
             ->andWhere('a.isBooked = :booked')
-            ->setParameter('providerId', $providerId)
-            ->setParameter('booked', false)
-            ->getQuery()
-            ->getResult();
+            ->setParameter('booked', false);
+
+        if ($providerId) {
+            $qb->andWhere('a.provider = :providerId')
+                ->setParameter('providerId', $providerId);
+        }
+
+        return $qb->getQuery()->getResult();
     }
 
     public function findByDateRange(int $providerId, \DateTime $start, \DateTime $end): array

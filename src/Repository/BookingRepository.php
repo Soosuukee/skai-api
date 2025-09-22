@@ -43,6 +43,16 @@ class BookingRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    public function findByProvider(\App\Entity\Provider $provider): array
+    {
+        return $this->createQueryBuilder('b')
+            ->innerJoin('b.slot', 's')
+            ->andWhere('s.provider = :provider')
+            ->setParameter('provider', $provider)
+            ->getQuery()
+            ->getResult();
+    }
+
     public function findAll(): array
     {
         return parent::findAll();

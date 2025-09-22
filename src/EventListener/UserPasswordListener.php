@@ -18,67 +18,29 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 #[AsDoctrineListener(event: Events::preUpdate)]
 class UserPasswordListener
 {
-    public function __construct(private UserPasswordHasherInterface $passwordHasher)
-    {
-    }
+    public function __construct(private UserPasswordHasherInterface $passwordHasher) {}
 
     public function prePersist(LifecycleEventArgs $args): void
     {
         $entity = $args->getObject();
-
-        if (!$this->supports($entity)) {
-            return;
+        if ($entity instanceof Provider || $entity instanceof Client) {
+            $this->hashPassword($entity);
         }
-
-        $this->hashPasswordIfNeeded($entity);
     }
 
     public function preUpdate(PreUpdateEventArgs $args): void
     {
         $entity = $args->getObject();
-
-        if (!$this->supports($entity)) {
-            return;
-        }
-
-        if ($args->hasChangedField('password')) {
-            $this->hashPasswordIfNeeded($entity);
-
-            // Recompute changeset since we changed the entity value
-            /** @var EntityManagerInterface $em */
-            $em = $args->getObjectManager();
-            $metadata = $em->getClassMetadata(get_class($entity));
-            $em->getUnitOfWork()->recomputeSingleEntityChangeSet($metadata, $entity);
+        if (($entity instanceof Provider || $entity instanceof Client) && $args->hasChangedField('password')) {
+            $this->hashPassword($entity);
         }
     }
 
-    private function supports(object $entity): bool
+    private function hashPassword($user): void
     {
-        return $entity instanceof PasswordAuthenticatedUserInterface
-            && ($entity instanceof Provider || $entity instanceof Client);
-    }
-
-    private function hashPasswordIfNeeded(PasswordAuthenticatedUserInterface $user): void
-    {
-        $current = method_exists($user, 'getPassword') ? (string) $user->getPassword() : '';
-
-        // Heuristic: if already hashed (bcrypt/argon start with $), skip
-        if ($current !== '' && str_starts_with($current, '$')) {
-            return;
-        }
-
-        // If empty, nothing to hash
-        if ($current === '') {
-            return;
-        }
-
-        $hashed = $this->passwordHasher->hashPassword($user, $current);
-        if ($user instanceof Provider) {
-            $user->setPassword($hashed);
-        } elseif ($user instanceof Client) {
-            $user->setPassword($hashed);
+        $password = $user->getPassword();
+        if ($password && !str_starts_with($password, '$')) {
+            $user->setPassword($this->passwordHasher->hashPassword($user, $password));
         }
     }
 }
-
-

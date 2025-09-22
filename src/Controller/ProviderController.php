@@ -7,7 +7,6 @@ namespace App\Controller;
 use App\Entity\Provider;
 use App\Repository\ProviderRepository;
 use App\Service\FileUploadService;
-use App\Service\SlugManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,6 +16,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 #[Route('/api/v1/providers', name: 'api_providers_')]
 class ProviderController extends AbstractController
@@ -27,8 +27,8 @@ class ProviderController extends AbstractController
         private SerializerInterface $serializer,
         private ValidatorInterface $validator,
         private FileUploadService $fileUploadService,
-        private SlugManager $slugManager,
-        private UserPasswordHasherInterface $passwordHasher
+        private UserPasswordHasherInterface $passwordHasher,
+        private AuthorizationCheckerInterface $authorizationChecker
     ) {}
 
     #[Route('', name: 'list', methods: ['GET'])]
@@ -36,27 +36,9 @@ class ProviderController extends AbstractController
     {
         $providers = $this->providerRepository->findAll();
 
-        $data = array_map(function (Provider $p) {
-            return [
-                'id' => $p->getId(),
-                'firstName' => $p->getFirstName(),
-                'lastName' => $p->getLastName(),
-                'email' => $p->getEmail(),
-                'profilePicture' => $p->getProfilePicture(),
-                'joinedAt' => $p->getJoinedAt()?->format(DATE_ATOM),
-                'slug' => $p->getSlug(),
-                'jobId' => $p->getJob()?->getId(),
-                'countryId' => $p->getCountry()?->getId(),
-                'city' => $p->getCity(),
-                'state' => $p->getState(),
-                'postalCode' => $p->getPostalCode(),
-                'address' => $p->getAddress(),
-                'hardSkills' => array_map(fn($s) => $s->getTitle(), $p->getHardSkills()->toArray()),
-                'softSkills' => array_map(fn($s) => $s->getTitle(), $p->getSoftSkills()->toArray()),
-                'languages' => array_map(fn($l) => $l->getName(), $p->getLanguages()->toArray()),
-                'role' => $p->getRole(),
-            ];
-        }, $providers);
+        $data = json_decode($this->serializer->serialize($providers, 'json', [
+            'groups' => ['provider:read']
+        ]), true);
 
         return new JsonResponse([
             'success' => true,
@@ -139,27 +121,9 @@ class ProviderController extends AbstractController
 
         $providers = $qb->getQuery()->getResult();
 
-        $data = array_map(function (Provider $p) {
-            return [
-                'id' => $p->getId(),
-                'firstName' => $p->getFirstName(),
-                'lastName' => $p->getLastName(),
-                'email' => $p->getEmail(),
-                'profilePicture' => $p->getProfilePicture(),
-                'joinedAt' => $p->getJoinedAt()?->format(DATE_ATOM),
-                'slug' => $p->getSlug(),
-                'job' => $p->getJob()?->getTitle(),
-                'country' => $p->getCountry()?->getName(),
-                'city' => $p->getCity(),
-                'state' => $p->getState(),
-                'postalCode' => $p->getPostalCode(),
-                'address' => $p->getAddress(),
-                'hardSkills' => array_map(fn($s) => $s->getTitle(), $p->getHardSkills()->toArray()),
-                'softSkills' => array_map(fn($s) => $s->getTitle(), $p->getSoftSkills()->toArray()),
-                'languages' => array_map(fn($l) => $l->getName(), $p->getLanguages()->toArray()),
-                'role' => $p->getRole(),
-            ];
-        }, $providers);
+        $data = json_decode($this->serializer->serialize($providers, 'json', [
+            'groups' => ['provider:read']
+        ]), true);
 
         return new JsonResponse([
             'success' => true,
@@ -227,25 +191,9 @@ class ProviderController extends AbstractController
             ], Response::HTTP_NOT_FOUND);
         }
 
-        $data = [
-            'id' => $provider->getId(),
-            'firstName' => $provider->getFirstName(),
-            'lastName' => $provider->getLastName(),
-            'email' => $provider->getEmail(),
-            'profilePicture' => $provider->getProfilePicture(),
-            'joinedAt' => $provider->getJoinedAt()?->format(DATE_ATOM),
-            'slug' => $provider->getSlug(),
-            'jobId' => $provider->getJob()?->getId(),
-            'countryId' => $provider->getCountry()?->getId(),
-            'city' => $provider->getCity(),
-            'state' => $provider->getState(),
-            'postalCode' => $provider->getPostalCode(),
-            'address' => $provider->getAddress(),
-            'hardSkills' => array_map(fn($s) => $s->getTitle(), $provider->getHardSkills()->toArray()),
-            'softSkills' => array_map(fn($s) => $s->getTitle(), $provider->getSoftSkills()->toArray()),
-            'languages' => array_map(fn($l) => $l->getName(), $provider->getLanguages()->toArray()),
-            'role' => $provider->getRole(),
-        ];
+        $data = json_decode($this->serializer->serialize($provider, 'json', [
+            'groups' => ['provider:read']
+        ]), true);
         return new JsonResponse([
             'success' => true,
             'data' => $data
@@ -499,49 +447,10 @@ class ProviderController extends AbstractController
         // Récupérer les services du provider via repository
         $serviceRepo = $this->entityManager->getRepository(\App\Entity\Service::class);
         $services = $serviceRepo->findBy(['provider' => $provider]);
-        $data = [];
-        foreach ($services as $s) {
-            $sections = [];
-            foreach ($s->getSections() as $section) {
-                $contents = [];
-                foreach ($section->getContents() as $content) {
-                    $images = [];
-                    foreach ($content->getImages() as $image) {
-                        $images[] = [
-                            'id' => $image->getId(),
-                            'serviceContentId' => $content->getId(),
-                            'url' => $image->getUrl(),
-                        ];
-                    }
-                    $contents[] = [
-                        'id' => $content->getId(),
-                        'serviceSectionId' => $section->getId(),
-                        'content' => (string) $content->getContent(),
-                        'images' => $images,
-                    ];
-                }
-                $sections[] = [
-                    'id' => $section->getId(),
-                    'serviceId' => $s->getId(),
-                    'title' => (string) $section->getTitle(),
-                    'content' => $contents,
-                ];
-            }
 
-            $data[] = [
-                'id' => $s->getId(),
-                'title' => $s->getTitle(),
-                'providerId' => $s->getProvider()?->getId(),
-                'summary' => $s->getSummary(),
-                'slug' => $s->getSlug(),
-                'minPrice' => $s->getMinPrice(),
-                'maxPrice' => $s->getMaxPrice(),
-                'cover' => $s->getCover(),
-                'createdAt' => $s->getCreatedAt()?->format(DATE_ATOM),
-                'tags' => array_map(fn($t) => $t->getTitle(), $s->getTags()->toArray()),
-                'sections' => $sections,
-            ];
-        }
+        $data = json_decode($this->serializer->serialize($services, 'json', [
+            'groups' => ['service:read']
+        ]), true);
 
         return new JsonResponse([
             'success' => true,
@@ -570,47 +479,9 @@ class ProviderController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'Service not found'], Response::HTTP_NOT_FOUND);
         }
 
-        // Reuse ServiceController formatting
-        $sections = [];
-        foreach ($service->getSections() as $section) {
-            $contents = [];
-            foreach ($section->getContents() as $content) {
-                $images = [];
-                foreach ($content->getImages() as $image) {
-                    $images[] = [
-                        'id' => $image->getId(),
-                        'serviceContentId' => $content->getId(),
-                        'url' => $image->getUrl(),
-                    ];
-                }
-                $contents[] = [
-                    'id' => $content->getId(),
-                    'serviceSectionId' => $section->getId(),
-                    'content' => (string) $content->getContent(),
-                    'images' => $images,
-                ];
-            }
-            $sections[] = [
-                'id' => $section->getId(),
-                'serviceId' => $service->getId(),
-                'title' => (string) $section->getTitle(),
-                'content' => $contents,
-            ];
-        }
-
-        $data = [
-            'id' => $service->getId(),
-            'title' => $service->getTitle(),
-            'providerId' => $service->getProvider()?->getId(),
-            'summary' => $service->getSummary(),
-            'slug' => $service->getSlug(),
-            'minPrice' => $service->getMinPrice(),
-            'maxPrice' => $service->getMaxPrice(),
-            'cover' => $service->getCover(),
-            'createdAt' => $service->getCreatedAt()?->format(DATE_ATOM),
-            'tags' => array_map(fn($t) => $t->getTitle(), $service->getTags()->toArray()),
-            'sections' => $sections,
-        ];
+        $data = json_decode($this->serializer->serialize($service, 'json', [
+            'groups' => ['service:read']
+        ]), true);
 
         return new JsonResponse(['success' => true, 'data' => $data]);
     }
@@ -677,23 +548,10 @@ class ProviderController extends AbstractController
 
         $articleRepo = $this->entityManager->getRepository(\App\Entity\Article::class);
         $articles = $articleRepo->findBy(['provider' => $provider]);
-        $data = [];
-        foreach ($articles as $a) {
-            $data[] = [
-                'articleId' => $a->getId(),
-                'providerId' => $a->getProvider()?->getId(),
-                'languageId' => $a->getLanguage()?->getId(),
-                'title' => $a->getTitle(),
-                'slug' => $a->getSlug(),
-                'publishedAt' => $a->getPublishedAt()?->format(DATE_ATOM),
-                'summary' => $a->getSummary(),
-                'isPublished' => (bool) $a->isPublished(),
-                'isFeatured' => (bool) $a->isFeatured(),
-                'cover' => $a->getCover(),
-                'tags' => array_map(fn($t) => $t->getTitle(), $a->getTags()->toArray()),
-                'sections' => [],
-            ];
-        }
+
+        $data = json_decode($this->serializer->serialize($articles, 'json', [
+            'groups' => ['article:read']
+        ]), true);
 
         return new JsonResponse(['success' => true, 'data' => $data, 'total' => count($data)]);
     }
@@ -718,21 +576,9 @@ class ProviderController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'Article not found'], Response::HTTP_NOT_FOUND);
         }
 
-        // Réutiliser le formatage d'ArticleController::show
-        $data = [
-            'articleId' => $article->getId(),
-            'providerId' => $article->getProvider()?->getId(),
-            'languageId' => $article->getLanguage()?->getId(),
-            'title' => $article->getTitle(),
-            'slug' => $article->getSlug(),
-            'publishedAt' => $article->getPublishedAt()?->format(DATE_ATOM),
-            'summary' => $article->getSummary(),
-            'isPublished' => (bool) $article->isPublished(),
-            'isFeatured' => (bool) $article->isFeatured(),
-            'cover' => $article->getCover(),
-            'tags' => array_map(fn($t) => $t->getTitle(), $article->getTags()->toArray()),
-            'sections' => [],
-        ];
+        $data = json_decode($this->serializer->serialize($article, 'json', [
+            'groups' => ['article:read']
+        ]), true);
 
         return new JsonResponse(['success' => true, 'data' => $data]);
     }
@@ -1039,5 +885,26 @@ class ProviderController extends AbstractController
     public function patchEducationByProviderSlugAndEducationId(string $providerSlug, int $educationId, Request $request): JsonResponse
     {
         return $this->updateEducationByProviderSlugAndEducationId($providerSlug, $educationId, $request);
+    }
+
+    #[Route('/{id}/permissions', name: 'check_permissions', methods: ['GET'])]
+    public function checkPermissions(Provider $provider): JsonResponse
+    {
+        $permissions = [
+            'can_view' => $this->authorizationChecker->isGranted('VIEW', $provider),
+            'can_edit' => $this->authorizationChecker->isGranted('EDIT', $provider),
+            'can_delete' => $this->authorizationChecker->isGranted('DELETE', $provider),
+            'can_view_contact' => $this->authorizationChecker->isGranted('VIEW_CONTACT', $provider),
+            'can_view_stats' => $this->authorizationChecker->isGranted('VIEW_STATS', $provider),
+            'can_manage_services' => $this->authorizationChecker->isGranted('MANAGE_SERVICES', $provider),
+            'can_manage_articles' => $this->authorizationChecker->isGranted('MANAGE_ARTICLES', $provider),
+        ];
+
+        return new JsonResponse([
+            'provider_id' => $provider->getId(),
+            'provider_name' => $provider->getFirstName() . ' ' . $provider->getLastName(),
+            'provider_email' => $provider->getEmail(),
+            'permissions' => $permissions
+        ]);
     }
 }

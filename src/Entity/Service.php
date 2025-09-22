@@ -25,16 +25,16 @@ use Symfony\Component\Validator\Constraints as Assert;
         new Get(),
         new GetCollection(),
         new Post(
-            security: "is_granted('ROLE_ADMIN') or (user and object.getProvider() == user)"
+            security: "user and object.getProvider() == user"
         ),
         new Put(
-            security: "is_granted('ROLE_ADMIN') or (user and object.getProvider() == user)"
+            security: "user and object.getProvider() == user"
         ),
         new Patch(
-            security: "is_granted('ROLE_ADMIN') or (user and object.getProvider() == user)"
+            security: "user and object.getProvider() == user"
         ),
         new Delete(
-            security: "is_granted('ROLE_ADMIN') or (user and object.getProvider() == user)"
+            security: "user and object.getProvider() == user"
         ),
     ],
     normalizationContext: ['groups' => ['service:read']],
@@ -79,11 +79,11 @@ class Service
     private ?string $maxPrice = null;
 
     #[ORM\Column]
-    #[Groups(['service:read', 'service:write'])]
+    #[Groups(['service:read', 'service:write', 'service:write:item'])]
     private ?bool $isActive = null;
 
     #[ORM\Column]
-    #[Groups(['service:read', 'service:write'])]
+    #[Groups(['service:read', 'service:write', 'service:write:item'])]
     private ?bool $isFeatured = null;
 
     #[ORM\Column(length: 255, nullable: true)]

@@ -45,11 +45,18 @@ class ClientFixtures extends Fixture implements DependentFixtureInterface
             $client->setJoinedAt(new \DateTimeImmutable());
             $client->setPassword('password123');
 
+            // Générer une date de naissance aléatoire (18-65 ans)
+            $minAge = 18;
+            $maxAge = 65;
+            $randomAge = random_int($minAge, $maxAge);
+            $birthDate = new \DateTimeImmutable('-' . $randomAge . ' years');
+            $client->setBirthDate($birthDate);
+
             $country = $countries[$index % count($countries)];
             $client->setCountry($country);
 
             // Slug
-            $slug = $this->clientSlugService->generateUniqueSlug($client);
+            $slug = $this->clientSlugService->generateSlugForNewClient($client->getFirstName(), $client->getLastName());
             $client->setSlug($slug);
 
             $manager->persist($client);

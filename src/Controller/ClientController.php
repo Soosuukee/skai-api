@@ -7,7 +7,6 @@ namespace App\Controller;
 use App\Entity\Client;
 use App\Repository\ClientRepository;
 use App\Service\FileUploadService;
-use App\Service\SlugManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,6 +16,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 #[Route('/api/v1/clients', name: 'api_clients_')]
 class ClientController extends AbstractController
@@ -27,8 +27,8 @@ class ClientController extends AbstractController
         private SerializerInterface $serializer,
         private ValidatorInterface $validator,
         private FileUploadService $fileUploadService,
-        private SlugManager $slugManager,
-        private UserPasswordHasherInterface $passwordHasher
+        private UserPasswordHasherInterface $passwordHasher,
+        private AuthorizationCheckerInterface $authorizationChecker
     ) {}
 
     #[Route('', name: 'list', methods: ['GET'])]
@@ -36,23 +36,9 @@ class ClientController extends AbstractController
     {
         $clients = $this->clientRepository->findAll();
 
-        $data = array_map(function (Client $c) {
-            return [
-                'id' => $c->getId(),
-                'firstName' => $c->getFirstName(),
-                'lastName' => $c->getLastName(),
-                'email' => $c->getEmail(),
-                'profilePicture' => $c->getProfilePicture(),
-                'joinedAt' => $c->getJoinedAt()?->format(DATE_ATOM),
-                'slug' => $c->getSlug(),
-                'countryId' => $c->getCountry()?->getId(),
-                'city' => $c->getCity(),
-                'state' => $c->getState(),
-                'postalCode' => $c->getPostalCode(),
-                'address' => $c->getAddress(),
-                'role' => 'client',
-            ];
-        }, $clients);
+        $data = json_decode($this->serializer->serialize($clients, 'json', [
+            'groups' => ['client:read']
+        ]), true);
         return new JsonResponse([
             'success' => true,
             'data' => $data,
@@ -72,21 +58,9 @@ class ClientController extends AbstractController
             ], Response::HTTP_NOT_FOUND);
         }
 
-        $data = [
-            'id' => $client->getId(),
-            'firstName' => $client->getFirstName(),
-            'lastName' => $client->getLastName(),
-            'email' => $client->getEmail(),
-            'profilePicture' => $client->getProfilePicture(),
-            'joinedAt' => $client->getJoinedAt()?->format(DATE_ATOM),
-            'slug' => $client->getSlug(),
-            'countryId' => $client->getCountry()?->getId(),
-            'city' => $client->getCity(),
-            'state' => $client->getState(),
-            'postalCode' => $client->getPostalCode(),
-            'address' => $client->getAddress(),
-            'role' => 'client',
-        ];
+        $data = json_decode($this->serializer->serialize($client, 'json', [
+            'groups' => ['client:read']
+        ]), true);
         return new JsonResponse([
             'success' => true,
             'data' => $data
@@ -105,21 +79,9 @@ class ClientController extends AbstractController
             ], Response::HTTP_NOT_FOUND);
         }
 
-        $data = [
-            'id' => $client->getId(),
-            'firstName' => $client->getFirstName(),
-            'lastName' => $client->getLastName(),
-            'email' => $client->getEmail(),
-            'profilePicture' => $client->getProfilePicture(),
-            'joinedAt' => $client->getJoinedAt()?->format(DATE_ATOM),
-            'slug' => $client->getSlug(),
-            'countryId' => $client->getCountry()?->getId(),
-            'city' => $client->getCity(),
-            'state' => $client->getState(),
-            'postalCode' => $client->getPostalCode(),
-            'address' => $client->getAddress(),
-            'role' => 'client',
-        ];
+        $data = json_decode($this->serializer->serialize($client, 'json', [
+            'groups' => ['client:read']
+        ]), true);
         return new JsonResponse([
             'success' => true,
             'data' => $data
@@ -330,6 +292,27 @@ class ClientController extends AbstractController
         return new JsonResponse([
             'success' => true,
             'message' => 'Mot de passe mis à jour'
+        ]);
+    }
+
+    #[Route('/{id}/permissions', name: 'check_permissions', methods: ['GET'])]
+    public function checkPermissions(Client $client): JsonResponse
+    {
+        $permissions = [
+            'can_view' => $this->authorizationChecker->isGranted('VIEW', $client),
+            'can_edit' => $this->authorizationChecker->isGranted('EDIT', $client),
+            'can_delete' => $this->authorizationChecker->isGranted('DELETE', $client),
+            'can_view_contact' => $this->authorizationChecker->isGranted('VIEW_CONTACT', $client),
+            'can_view_stats' => $this->authorizationChecker->isGranted('VIEW_STATS', $client),
+            'can_manage_bookings' => $this->authorizationChecker->isGranted('MANAGE_BOOKINGS', $client),
+            'can_manage_reviews' => $this->authorizationChecker->isGranted('MANAGE_REVIEWS', $client),
+        ];
+
+        return new JsonResponse([
+            'client_id' => $client->getId(),
+            'client_name' => $client->getFirstName() . ' ' . $client->getLastName(),
+            'client_email' => $client->getEmail(),
+            'permissions' => $permissions
         ]);
     }
 }

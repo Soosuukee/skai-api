@@ -34,11 +34,11 @@ class Country
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['country:read', 'client:read', 'service:read', 'article:read'])]
+    #[Groups(['country:read', 'client:read', 'provider:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255, unique: true)]
-    #[Groups(['country:read', 'country:write', 'provider:read', 'client:read', 'service:read', 'article:read'])]
+    #[Groups(['country:read', 'country:write', 'provider:read', 'client:read'])]
     #[Assert\NotBlank]
     #[Assert\Length(min: 2, max: 255)]
     private ?string $name = null;

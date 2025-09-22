@@ -60,6 +60,13 @@ class ProviderFixtures extends Fixture implements DependentFixtureInterface
             $provider->setJoinedAt(new \DateTimeImmutable());
             $provider->setPassword('password123');
 
+            // Générer une date de naissance aléatoire (18-65 ans)
+            $minAge = 18;
+            $maxAge = 65;
+            $randomAge = random_int($minAge, $maxAge);
+            $birthDate = new \DateTimeImmutable('-' . $randomAge . ' years');
+            $provider->setBirthDate($birthDate);
+
             $country = $countries[$index % count($countries)];
             $provider->setCountry($country);
 
@@ -70,7 +77,7 @@ class ProviderFixtures extends Fixture implements DependentFixtureInterface
             }
 
             // Slug
-            $slug = $this->providerSlugService->generateUniqueSlug($provider);
+            $slug = $this->providerSlugService->generateSlugForNewProvider($provider->getFirstName(), $provider->getLastName());
             $provider->setSlug($slug);
 
             $manager->persist($provider);

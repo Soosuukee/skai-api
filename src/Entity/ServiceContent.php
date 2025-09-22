@@ -20,10 +20,18 @@ use Symfony\Component\Serializer\Annotation\Groups;
     operations: [
         new Get(),
         new GetCollection(),
-        new Post(),
-        new Put(),
-        new Patch(),
-        new Delete()
+        new Post(
+            security: "user and object.getServiceSection().getService().getProvider() == user"
+        ),
+        new Put(
+            security: "user and object.getServiceSection().getService().getProvider() == user"
+        ),
+        new Patch(
+            security: "user and object.getServiceSection().getService().getProvider() == user"
+        ),
+        new Delete(
+            security: "user and object.getServiceSection().getService().getProvider() == user"
+        )
     ],
     normalizationContext: ['groups' => ['service:read']],
     denormalizationContext: ['groups' => ['service:write']]
@@ -37,11 +45,12 @@ class ServiceContent
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['service:read'])]
+    #[Groups(['service:read', 'service:write', 'service:write:item'])]
     private ?string $content = null;
 
     #[ORM\ManyToOne(targetEntity: ServiceSection::class)]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['service:write'])]
     private ?ServiceSection $serviceSection = null;
 
     #[ORM\OneToMany(mappedBy: 'serviceContent', targetEntity: ServiceImage::class, orphanRemoval: true)]

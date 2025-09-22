@@ -36,7 +36,7 @@ class SoftSkill
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['softskill:read'])]
+    #[Groups(['softskill:read', 'provider:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255, unique: true)]

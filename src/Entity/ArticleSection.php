@@ -20,10 +20,18 @@ use Symfony\Component\Serializer\Annotation\Groups;
     operations: [
         new Get(),
         new GetCollection(),
-        new Post(),
-        new Put(),
-        new Patch(),
-        new Delete()
+        new Post(
+            security: "user and object.getArticle().getProvider() == user"
+        ),
+        new Put(
+            security: "user and object.getArticle().getProvider() == user"
+        ),
+        new Patch(
+            security: "user and object.getArticle().getProvider() == user"
+        ),
+        new Delete(
+            security: "user and object.getArticle().getProvider() == user"
+        )
     ],
     normalizationContext: ['groups' => ['article:read']],
     denormalizationContext: ['groups' => ['article:write']]
@@ -37,11 +45,12 @@ class ArticleSection
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['article:read'])]
+    #[Groups(['article:read', 'article:write', 'article:write:item'])]
     private ?string $title = null;
 
     #[ORM\ManyToOne(targetEntity: Article::class)]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['article:write'])]
     private ?Article $article = null;
 
     #[ORM\OneToMany(mappedBy: 'articleSection', targetEntity: ArticleContent::class, orphanRemoval: true)]

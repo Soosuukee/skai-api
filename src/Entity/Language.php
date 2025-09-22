@@ -36,7 +36,7 @@ class Language
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['language:read', 'article:read'])]
+    #[Groups(['language:read', 'article:read', 'provider:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255, unique: true)]

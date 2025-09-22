@@ -25,16 +25,16 @@ use Symfony\Component\Validator\Constraints as Assert;
         new Get(),
         new GetCollection(),
         new Post(
-            security: "is_granted('ROLE_ADMIN') or (user and object.getProvider() == user)"
+            security: "user and object.getProvider() == user"
         ),
         new Put(
-            security: "is_granted('ROLE_ADMIN') or (user and object.getProvider() == user)"
+            security: "user and object.getProvider() == user"
         ),
         new Patch(
-            security: "is_granted('ROLE_ADMIN') or (user and object.getProvider() == user)"
+            security: "user and object.getProvider() == user"
         ),
         new Delete(
-            security: "is_granted('ROLE_ADMIN') or (user and object.getProvider() == user)"
+            security: "user and object.getProvider() == user"
         ),
     ],
     normalizationContext: ['groups' => ['article:read']],
@@ -52,6 +52,12 @@ class Article
 
     #[ORM\Column(length: 255)]
     #[Groups(['article:read', 'article:write'])]
+    #[Assert\NotBlank(message: 'Le titre ne peut pas être vide')]
+    #[Assert\Length(max: 255, maxMessage: 'Le titre ne peut pas dépasser 255 caractères')]
+    #[Assert\Regex(
+        pattern: '/^[a-zA-Z0-9\s\-_.,!?àâäéèêëïîôöùûüÿçÀÂÄÉÈÊËÏÎÔÖÙÛÜŸÇ]+$/',
+        message: 'Le titre ne peut contenir que des lettres, chiffres, espaces et les caractères suivants : - _ . , ! ?'
+    )]
     private ?string $title = null;
 
     #[ORM\ManyToOne(targetEntity: Provider::class)]
@@ -73,11 +79,11 @@ class Article
     private ?string $summary = null;
 
     #[ORM\Column]
-    #[Groups(['article:read', 'article:write'])]
+    #[Groups(['article:read', 'article:write', 'article:write:item'])]
     private ?bool $isPublished = null;
 
     #[ORM\Column]
-    #[Groups(['article:read', 'article:write'])]
+    #[Groups(['article:read', 'article:write', 'article:write:item'])]
     private ?bool $isFeatured = null;
 
     #[ORM\Column(length: 255, nullable: true)]

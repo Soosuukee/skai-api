@@ -26,14 +26,14 @@ use Symfony\Component\Security\Core\User\UserInterface;
         new GetCollection(),
         new Post(),
         new Put(
-            security: "is_granted('ROLE_ADMIN') or object == user"
+            security: "object == user"
         ),
         new Patch(
             denormalizationContext: ['groups' => ['client:patch']],
-            security: "is_granted('ROLE_ADMIN') or object == user"
+            security: "object == user"
         ),
         new Delete(
-            security: "is_granted('ROLE_ADMIN') or object == user"
+            security: "object == user"
         ),
     ],
     normalizationContext: ['groups' => ['client:read']],
@@ -112,6 +112,15 @@ class Client implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255)]
     #[Groups(['client:read', 'client:write'])]
     private ?string $address = null;
+
+    #[ORM\Column(type: 'date', nullable: true)]
+    #[Groups(['client:read', 'client:write'])]
+    #[Assert\LessThan('today', message: 'La date de naissance ne peut pas être dans le futur')]
+    #[Assert\LessThanOrEqual(
+        value: '-18 years',
+        message: 'Vous devez avoir au moins 18 ans'
+    )]
+    private ?\DateTimeInterface $birthDate = null;
 
     public function getId(): ?int
     {
@@ -262,6 +271,20 @@ class Client implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function getBirthDate(): ?\DateTimeInterface
+    {
+        return $this->birthDate;
+    }
+
+    public function setBirthDate(?\DateTimeInterface $birthDate): static
+    {
+        $this->birthDate = $birthDate;
+
+        return $this;
+    }
+
+
+    #[Groups(['client:read'])]
     public function getRole(): string
     {
         return 'client';
