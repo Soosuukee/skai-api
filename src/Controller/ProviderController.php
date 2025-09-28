@@ -215,6 +215,7 @@ class ProviderController extends AbstractController
             $provider->setState($data['state'] ?? '');
             $provider->setPostalCode($data['postalCode'] ?? '');
             $provider->setAddress($data['address'] ?? '');
+            $provider->setDescription($data['description'] ?? null);
             $provider->setJoinedAt(new \DateTimeImmutable());
 
             // Set relations if provided
@@ -273,6 +274,7 @@ class ProviderController extends AbstractController
             if (isset($data['state'])) $provider->setState($data['state']);
             if (isset($data['postalCode'])) $provider->setPostalCode($data['postalCode']);
             if (isset($data['address'])) $provider->setAddress($data['address']);
+            if (isset($data['description'])) $provider->setDescription($data['description']);
 
             // Validate entity
             $errors = $this->validator->validate($provider);

@@ -74,7 +74,7 @@ class ProviderRepository extends ServiceEntityRepository
     public function searchProviders(string $query): array
     {
         return $this->createQueryBuilder('p')
-            ->andWhere('p.firstName LIKE :query OR p.lastName LIKE :query OR p.email LIKE :query')
+            ->andWhere('p.firstName LIKE :query OR p.lastName LIKE :query OR p.email LIKE :query OR p.description LIKE :query')
             ->setParameter('query', '%' . $query . '%')
             ->getQuery()
             ->getResult();

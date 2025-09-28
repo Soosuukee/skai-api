@@ -40,7 +40,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
     normalizationContext: ['groups' => ['provider:read']],
     denormalizationContext: ['groups' => ['provider:write']]
 )]
-#[SearchFilter(['firstName' => 'partial', 'lastName' => 'partial', 'email' => 'partial', 'city' => 'partial', 'country.name' => 'partial', 'job.title' => 'partial', 'languages.name' => 'partial', 'hardSkills.title' => 'partial', 'softSkills.title' => 'partial'])]
+#[SearchFilter(['firstName' => 'partial', 'lastName' => 'partial', 'email' => 'partial', 'city' => 'partial', 'description' => 'partial', 'country.name' => 'partial', 'job.title' => 'partial', 'languages.name' => 'partial', 'hardSkills.title' => 'partial', 'softSkills.title' => 'partial'])]
 #[OrderFilter(['firstName', 'lastName', 'email', 'joinedAt'])]
 class Provider implements UserInterface, PasswordAuthenticatedUserInterface
 {
@@ -120,6 +120,11 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255)]
     #[Groups(['provider:read', 'provider:write'])]
     private ?string $address = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    #[Groups(['provider:read', 'provider:write'])]
+    #[Assert\Length(max: 2000)]
+    private ?string $description = null;
 
     #[ORM\Column(type: 'date', nullable: true)]
     #[Groups(['provider:read', 'provider:write'])]
@@ -322,6 +327,18 @@ class Provider implements UserInterface, PasswordAuthenticatedUserInterface
     public function setAddress(string $address): static
     {
         $this->address = $address;
+
+        return $this;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(?string $description): static
+    {
+        $this->description = $description;
 
         return $this;
     }
