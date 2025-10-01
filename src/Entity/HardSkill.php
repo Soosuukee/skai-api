@@ -45,8 +45,14 @@ class HardSkill
     #[Assert\Length(min: 2, max: 255)]
     private ?string $title = null;
 
-    #[ORM\ManyToMany(targetEntity: Provider::class, inversedBy: 'hardSkills')]
+    #[ORM\Column(length: 255, unique: true)]
     #[Groups(['hardskill:read'])]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 2, max: 255)]
+    #[Assert\Regex(pattern: '/^[a-z0-9-]+$/', message: 'Le slug ne doit contenir que des lettres minuscules, des chiffres et des tirets')]
+    private ?string $slug = null;
+
+    #[ORM\ManyToMany(targetEntity: Provider::class, inversedBy: 'hardSkills')]
     private Collection $providers;
 
     public function __construct()
@@ -67,6 +73,18 @@ class HardSkill
     public function setTitle(string $title): static
     {
         $this->title = $title;
+
+        return $this;
+    }
+
+    public function getSlug(): ?string
+    {
+        return $this->slug;
+    }
+
+    public function setSlug(?string $slug): static
+    {
+        $this->slug = $slug;
 
         return $this;
     }

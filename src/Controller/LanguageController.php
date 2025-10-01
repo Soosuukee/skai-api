@@ -29,9 +29,10 @@ class LanguageController extends AbstractController
     {
         $languages = $this->languageRepository->findAll();
 
+        $json = $this->serializer->serialize($languages, 'json', ['groups' => ['language:read']]);
         return new JsonResponse([
             'success' => true,
-            'data' => $languages,
+            'data' => json_decode($json, true),
             'total' => count($languages)
         ]);
     }
@@ -48,9 +49,10 @@ class LanguageController extends AbstractController
             ], Response::HTTP_NOT_FOUND);
         }
 
+        $json = $this->serializer->serialize($language, 'json', ['groups' => ['language:read']]);
         return new JsonResponse([
             'success' => true,
-            'data' => $language
+            'data' => json_decode($json, true)
         ]);
     }
 }

@@ -29,9 +29,10 @@ class HardSkillController extends AbstractController
     {
         $hardSkills = $this->hardSkillRepository->findAll();
 
+        $json = $this->serializer->serialize($hardSkills, 'json', ['groups' => ['hardskill:read']]);
         return new JsonResponse([
             'success' => true,
-            'data' => $hardSkills,
+            'data' => json_decode($json, true),
             'total' => count($hardSkills)
         ]);
     }
@@ -48,9 +49,10 @@ class HardSkillController extends AbstractController
             ], Response::HTTP_NOT_FOUND);
         }
 
+        $json = $this->serializer->serialize($hardSkill, 'json', ['groups' => ['hardskill:read']]);
         return new JsonResponse([
             'success' => true,
-            'data' => $hardSkill
+            'data' => json_decode($json, true)
         ]);
     }
 }

@@ -12,25 +12,10 @@ use Doctrine\ORM\Event\PreRemoveEventArgs;
 use Doctrine\ORM\Event\PreUpdateEventArgs;
 use Doctrine\ORM\Events;
 
-#[AsDoctrineListener(event: Events::postPersist)]
 #[AsDoctrineListener(event: Events::preRemove)]
 #[AsDoctrineListener(event: Events::preUpdate)]
 class BookingEventListener
 {
-    public function postPersist(PostPersistEventArgs $args): void
-    {
-        $entity = $args->getObject();
-
-        if ($entity instanceof Booking) {
-            $slot = $entity->getSlot();
-            if ($slot) {
-                $slot->setIsBooked(true);
-                $args->getObjectManager()->persist($slot);
-                $args->getObjectManager()->flush();
-            }
-        }
-    }
-
     public function preRemove(PreRemoveEventArgs $args): void
     {
         $entity = $args->getObject();
@@ -53,7 +38,10 @@ class BookingEventListener
             if ($slot && $args->hasChangedField('status')) {
                 $newStatus = $entity->getStatus();
 
-                if ($newStatus === BookingStatus::DECLINED) {
+                if ($newStatus === BookingStatus::ACCEPTED) {
+                    $slot->setIsBooked(true);
+                    $args->getObjectManager()->persist($slot);
+                } elseif ($newStatus === BookingStatus::DECLINED) {
                     $slot->setIsBooked(false);
                     $args->getObjectManager()->persist($slot);
                 }

@@ -37,14 +37,17 @@ class Job
     #[Groups(['job:read', 'provider:read'])]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, unique: true)]
     #[Groups(['job:read', 'job:write', 'provider:read'])]
     #[Assert\NotBlank]
     #[Assert\Length(min: 2, max: 255)]
     private ?string $title = null;
 
     #[ORM\Column(length: 255, unique: true)]
-    #[Groups(['job:read'])]
+    #[Groups(['job:read', 'provider:read'])]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 2, max: 255)]
+    #[Assert\Regex(pattern: '/^[a-z0-9-]+$/', message: 'Le slug ne doit contenir que des lettres minuscules, des chiffres et des tirets')]
     private ?string $slug = null;
 
     public function getId(): ?int

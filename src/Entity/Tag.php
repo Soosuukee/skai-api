@@ -27,11 +27,11 @@ class Tag
     #[Groups(['service:read', 'article:read', 'tag:read'])]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, unique: true)]
     #[Groups(['service:read', 'article:read', 'tag:read'])]
     private ?string $title = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, unique: true)]
     #[Groups(['service:read', 'article:read', 'tag:read'])]
     private ?string $slug = null;
 

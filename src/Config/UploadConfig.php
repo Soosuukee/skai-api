@@ -46,7 +46,8 @@ class UploadConfig
      */
     public static function getUploadPath(string $directory): string
     {
-        return $_ENV['UPLOAD_PATH'] ?? 'public/uploads/' . $directory;
+        $base = $_ENV['UPLOAD_PATH'] ?? (dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'public');
+        return rtrim($base, '/\\') . '/' . ltrim($directory, '/\\');
     }
 
     /**
@@ -87,7 +88,7 @@ class UploadConfig
      */
     public static function getRelativeUrl(string $directory, string $filename): string
     {
-        return '/uploads/' . $directory . $filename;
+        return '/' . $directory . $filename;
     }
 
     /**

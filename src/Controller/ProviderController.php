@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Entity\Provider;
 use App\Repository\ProviderRepository;
+use App\Config\UploadConfig;
 use App\Service\FileUploadService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -45,6 +46,46 @@ class ProviderController extends AbstractController
             'data' => $data,
             'total' => count($providers)
         ]);
+    }
+
+    #[Route('/country/{countrySlug}', name: 'list_by_country', methods: ['GET'])]
+    public function listByCountry(string $countrySlug): JsonResponse
+    {
+        $providers = $this->providerRepository->findByCountrySlug($countrySlug);
+        $data = json_decode($this->serializer->serialize($providers, 'json', ['groups' => ['provider:read']]), true);
+        return new JsonResponse(['success' => true, 'data' => $data, 'total' => count($data)]);
+    }
+
+    #[Route('/language/{languageSlug}', name: 'list_by_language', methods: ['GET'])]
+    public function listByLanguage(string $languageSlug): JsonResponse
+    {
+        $providers = $this->providerRepository->findByLanguageSlug($languageSlug);
+        $data = json_decode($this->serializer->serialize($providers, 'json', ['groups' => ['provider:read']]), true);
+        return new JsonResponse(['success' => true, 'data' => $data, 'total' => count($data)]);
+    }
+
+    #[Route('/job/{jobSlug}', name: 'list_by_job', methods: ['GET'])]
+    public function listByJob(string $jobSlug): JsonResponse
+    {
+        $providers = $this->providerRepository->findByJobSlug($jobSlug);
+        $data = json_decode($this->serializer->serialize($providers, 'json', ['groups' => ['provider:read']]), true);
+        return new JsonResponse(['success' => true, 'data' => $data, 'total' => count($data)]);
+    }
+
+    #[Route('/hard-skill/{hardSkillSlug}', name: 'list_by_hard_skill', methods: ['GET'])]
+    public function listByHardSkill(string $hardSkillSlug): JsonResponse
+    {
+        $providers = $this->providerRepository->findByHardSkillSlug($hardSkillSlug);
+        $data = json_decode($this->serializer->serialize($providers, 'json', ['groups' => ['provider:read']]), true);
+        return new JsonResponse(['success' => true, 'data' => $data, 'total' => count($data)]);
+    }
+
+    #[Route('/soft-skill/{softSkillSlug}', name: 'list_by_soft_skill', methods: ['GET'])]
+    public function listBySoftSkill(string $softSkillSlug): JsonResponse
+    {
+        $providers = $this->providerRepository->findBySoftSkillSlug($softSkillSlug);
+        $data = json_decode($this->serializer->serialize($providers, 'json', ['groups' => ['provider:read']]), true);
+        return new JsonResponse(['success' => true, 'data' => $data, 'total' => count($data)]);
     }
 
     #[Route('/filter', name: 'filter', methods: ['GET'])]
@@ -254,78 +295,19 @@ class ProviderController extends AbstractController
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
     public function update(int $id, Request $request): JsonResponse
     {
-        $provider = $this->providerRepository->findById($id);
-
-        if (!$provider) {
-            return new JsonResponse([
-                'success' => false,
-                'error' => 'Provider not found'
-            ], Response::HTTP_NOT_FOUND);
-        }
-
-        try {
-            $data = json_decode($request->getContent(), true);
-
-            if (isset($data['firstName'])) $provider->setFirstName($data['firstName']);
-            if (isset($data['lastName'])) $provider->setLastName($data['lastName']);
-            if (isset($data['email'])) $provider->setEmail($data['email']);
-            if (isset($data['password'])) $provider->setPassword($data['password']); // TODO: Hash password
-            if (isset($data['city'])) $provider->setCity($data['city']);
-            if (isset($data['state'])) $provider->setState($data['state']);
-            if (isset($data['postalCode'])) $provider->setPostalCode($data['postalCode']);
-            if (isset($data['address'])) $provider->setAddress($data['address']);
-            if (isset($data['description'])) $provider->setDescription($data['description']);
-
-            // Validate entity
-            $errors = $this->validator->validate($provider);
-            if (count($errors) > 0) {
-                return new JsonResponse([
-                    'success' => false,
-                    'errors' => (string) $errors
-                ], Response::HTTP_BAD_REQUEST);
-            }
-
-            $this->entityManager->flush();
-
-            return new JsonResponse([
-                'success' => true,
-                'data' => $provider,
-                'message' => 'Provider updated successfully'
-            ]);
-        } catch (\Exception $e) {
-            return new JsonResponse([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return new JsonResponse([
+            'success' => false,
+            'error' => 'Deprecated endpoint. Use PATCH /api/v1/auth/complete-provider-profile'
+        ], Response::HTTP_GONE);
     }
 
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
     public function delete(int $id): JsonResponse
     {
-        $provider = $this->providerRepository->findById($id);
-
-        if (!$provider) {
-            return new JsonResponse([
-                'success' => false,
-                'error' => 'Provider not found'
-            ], Response::HTTP_NOT_FOUND);
-        }
-
-        try {
-            $this->entityManager->remove($provider);
-            $this->entityManager->flush();
-
-            return new JsonResponse([
-                'success' => true,
-                'message' => 'Provider deleted successfully'
-            ]);
-        } catch (\Exception $e) {
-            return new JsonResponse([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return new JsonResponse([
+            'success' => false,
+            'error' => 'Deprecated endpoint. Use appropriate authenticated profile routes'
+        ], Response::HTTP_GONE);
     }
 
     #[Route('/{id}/password', name: 'change_password', methods: ['PATCH'], requirements: ['id' => '\\d+'])]
@@ -461,6 +443,50 @@ class ProviderController extends AbstractController
         ]);
     }
 
+    #[Route('/{providerSlug}/services/{serviceSlug}/cover', name: 'upload_service_cover', methods: ['POST'], requirements: ['providerSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*', 'serviceSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*'])]
+    public function uploadServiceCover(string $providerSlug, string $serviceSlug, Request $request): JsonResponse
+    {
+        $provider = $this->providerRepository->findBySlug($providerSlug);
+        if (!$provider) {
+            return new JsonResponse(['success' => false, 'error' => 'Provider not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $currentUser = $this->getUser();
+        if (!$currentUser || !($currentUser instanceof \App\Entity\Provider) || $currentUser->getId() !== $provider->getId()) {
+            return new JsonResponse(['success' => false, 'error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
+        }
+
+        $uploadedFile = $request->files->get('service_cover');
+        if (!$uploadedFile) {
+            return new JsonResponse(['success' => false, 'error' => 'No file uploaded (expected field: service_cover)'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $serviceRepo = $this->entityManager->getRepository(\App\Entity\Service::class);
+        $service = $serviceRepo->createQueryBuilder('s')
+            ->innerJoin('s.provider', 'p')
+            ->andWhere('p = :provider AND s.slug = :slug')
+            ->setParameter('provider', $provider)
+            ->setParameter('slug', $serviceSlug)
+            ->getQuery()
+            ->getOneOrNullResult();
+        if (!$service) {
+            return new JsonResponse(['success' => false, 'error' => 'Service not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $dir = UploadConfig::getServiceCoverPath((int)$provider->getId(), (int)$service->getId());
+        $abs = UploadConfig::getUploadPath($dir);
+        if (!is_dir($abs)) {
+            @mkdir($abs, 0755, true);
+        }
+        $unique = UploadConfig::generateUniqueFilename($uploadedFile->getClientOriginalName(), $dir);
+        $uploadedFile->move($abs, $unique);
+        $url = UploadConfig::getRelativeUrl($dir, $unique);
+        $service->setCover($url);
+        $this->entityManager->flush();
+
+        return new JsonResponse(['success' => true, 'data' => ['cover_url' => $url]]);
+    }
+
     #[Route('/{providerSlug}/services/{serviceSlug}', name: 'get_service_by_provider_slug_and_service_slug', methods: ['GET'], requirements: ['providerSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*', 'serviceSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*'])]
     public function getServiceByProviderAndServiceSlug(string $providerSlug, string $serviceSlug): JsonResponse
     {
@@ -486,6 +512,45 @@ class ProviderController extends AbstractController
         ]), true);
 
         return new JsonResponse(['success' => true, 'data' => $data]);
+    }
+
+    #[Route('/{providerSlug}/services/{serviceSlug}', name: 'delete_service_by_provider_slug_and_service_slug', methods: ['DELETE'], requirements: ['providerSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*', 'serviceSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*'])]
+    public function deleteServiceByProviderAndServiceSlug(string $providerSlug, string $serviceSlug, Request $request): JsonResponse
+    {
+        $provider = $this->providerRepository->findBySlug($providerSlug);
+        if (!$provider) {
+            return new JsonResponse(['success' => false, 'error' => 'Provider not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $currentUser = $this->getUser();
+        if (!$currentUser || !($currentUser instanceof \App\Entity\Provider) || $currentUser->getId() !== $provider->getId()) {
+            return new JsonResponse(['success' => false, 'error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
+        }
+
+        $data = json_decode($request->getContent(), true) ?? [];
+        $currentPassword = (string)($data['currentPassword'] ?? '');
+        if ($currentPassword === '') {
+            return new JsonResponse(['success' => false, 'error' => 'currentPassword is required'], Response::HTTP_BAD_REQUEST);
+        }
+        if (!$this->passwordHasher->isPasswordValid($provider, $currentPassword)) {
+            return new JsonResponse(['success' => false, 'error' => 'Invalid password'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $serviceRepo = $this->entityManager->getRepository(\App\Entity\Service::class);
+        $service = $serviceRepo->createQueryBuilder('s')
+            ->innerJoin('s.provider', 'p')
+            ->andWhere('p = :provider AND s.slug = :slug')
+            ->setParameter('provider', $provider)
+            ->setParameter('slug', $serviceSlug)
+            ->getQuery()
+            ->getOneOrNullResult();
+        if (!$service) {
+            return new JsonResponse(['success' => false, 'error' => 'Service not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->entityManager->remove($service);
+        $this->entityManager->flush();
+        return new JsonResponse(['success' => true, 'message' => 'Service deleted']);
     }
 
     #[Route('/{providerSlug}/services/{serviceSlug}', name: 'update_service_by_provider_slug_and_service_slug', methods: ['PUT'], requirements: ['providerSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*', 'serviceSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*'])]
@@ -585,6 +650,167 @@ class ProviderController extends AbstractController
         return new JsonResponse(['success' => true, 'data' => $data]);
     }
 
+    #[Route('/{providerSlug}/articles/{articleSlug}/cover', name: 'upload_article_cover', methods: ['POST'], requirements: ['providerSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*', 'articleSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*'])]
+    public function uploadArticleCover(string $providerSlug, string $articleSlug, Request $request): JsonResponse
+    {
+        $provider = $this->providerRepository->findBySlug($providerSlug);
+        if (!$provider) {
+            return new JsonResponse(['success' => false, 'error' => 'Provider not found'], Response::HTTP_NOT_FOUND);
+        }
+        $currentUser = $this->getUser();
+        if (!$currentUser || !($currentUser instanceof \App\Entity\Provider) || $currentUser->getId() !== $provider->getId()) {
+            return new JsonResponse(['success' => false, 'error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
+        }
+
+        $uploadedFile = $request->files->get('article_cover');
+        if (!$uploadedFile) {
+            return new JsonResponse(['success' => false, 'error' => 'No file uploaded (expected field: article_cover)'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $articleRepo = $this->entityManager->getRepository(\App\Entity\Article::class);
+        $article = $articleRepo->createQueryBuilder('a')
+            ->innerJoin('a.provider', 'p')
+            ->andWhere('p = :provider AND a.slug = :slug')
+            ->setParameter('provider', $provider)
+            ->setParameter('slug', $articleSlug)
+            ->getQuery()
+            ->getOneOrNullResult();
+        if (!$article) {
+            return new JsonResponse(['success' => false, 'error' => 'Article not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $dir = UploadConfig::getArticleCoverPath((int)$provider->getId(), (int)$article->getId());
+        $abs = UploadConfig::getUploadPath($dir);
+        if (!is_dir($abs)) {
+            @mkdir($abs, 0755, true);
+        }
+        $unique = UploadConfig::generateUniqueFilename($uploadedFile->getClientOriginalName(), $dir);
+        $uploadedFile->move($abs, $unique);
+        $url = UploadConfig::getRelativeUrl($dir, $unique);
+        $article->setCover($url);
+        $this->entityManager->flush();
+
+        return new JsonResponse(['success' => true, 'data' => ['cover_url' => $url]]);
+    }
+
+    #[Route('/{providerSlug}/experiences/{experienceId}/logo', name: 'upload_experience_logo', methods: ['POST'], requirements: ['providerSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*', 'experienceId' => '\\d+'])]
+    public function uploadExperienceLogo(string $providerSlug, int $experienceId, Request $request): JsonResponse
+    {
+        $provider = $this->providerRepository->findBySlug($providerSlug);
+        if (!$provider) {
+            return new JsonResponse(['success' => false, 'error' => 'Provider not found'], Response::HTTP_NOT_FOUND);
+        }
+        $currentUser = $this->getUser();
+        if (!$currentUser || !($currentUser instanceof \App\Entity\Provider) || $currentUser->getId() !== $provider->getId()) {
+            return new JsonResponse(['success' => false, 'error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
+        }
+        $uploadedFile = $request->files->get('experience_logo');
+        if (!$uploadedFile) {
+            return new JsonResponse(['success' => false, 'error' => 'No file uploaded (expected field: experience_logo)'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $expRepo = $this->entityManager->getRepository(\App\Entity\Experience::class);
+        $experience = $expRepo->createQueryBuilder('e')
+            ->innerJoin('e.provider', 'p')
+            ->andWhere('p = :provider AND e.id = :id')
+            ->setParameter('provider', $provider)
+            ->setParameter('id', $experienceId)
+            ->getQuery()->getOneOrNullResult();
+        if (!$experience) {
+            return new JsonResponse(['success' => false, 'error' => 'Experience not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $dir = UploadConfig::getExperiencePath((int)$provider->getId(), (int)$experience->getId());
+        $abs = UploadConfig::getUploadPath($dir);
+        if (!is_dir($abs)) {
+            @mkdir($abs, 0755, true);
+        }
+        $unique = UploadConfig::generateUniqueFilename($uploadedFile->getClientOriginalName(), $dir);
+        $uploadedFile->move($abs, $unique);
+        $url = UploadConfig::getRelativeUrl($dir, $unique);
+        $experience->setCompanyLogo($url);
+        $this->entityManager->flush();
+        return new JsonResponse(['success' => true, 'data' => ['logo_url' => $url]]);
+    }
+
+    #[Route('/{providerSlug}/educations/{educationId}/logo', name: 'upload_education_logo', methods: ['POST'], requirements: ['providerSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*', 'educationId' => '\\d+'])]
+    public function uploadEducationLogo(string $providerSlug, int $educationId, Request $request): JsonResponse
+    {
+        $provider = $this->providerRepository->findBySlug($providerSlug);
+        if (!$provider) {
+            return new JsonResponse(['success' => false, 'error' => 'Provider not found'], Response::HTTP_NOT_FOUND);
+        }
+        $currentUser = $this->getUser();
+        if (!$currentUser || !($currentUser instanceof \App\Entity\Provider) || $currentUser->getId() !== $provider->getId()) {
+            return new JsonResponse(['success' => false, 'error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
+        }
+        $uploadedFile = $request->files->get('education_logo');
+        if (!$uploadedFile) {
+            return new JsonResponse(['success' => false, 'error' => 'No file uploaded (expected field: education_logo)'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $eduRepo = $this->entityManager->getRepository(\App\Entity\Education::class);
+        $education = $eduRepo->createQueryBuilder('e')
+            ->innerJoin('e.provider', 'p')
+            ->andWhere('p = :provider AND e.id = :id')
+            ->setParameter('provider', $provider)
+            ->setParameter('id', $educationId)
+            ->getQuery()->getOneOrNullResult();
+        if (!$education) {
+            return new JsonResponse(['success' => false, 'error' => 'Education not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $dir = UploadConfig::getEducationPath((int)$provider->getId(), (int)$education->getId());
+        $abs = UploadConfig::getUploadPath($dir);
+        if (!is_dir($abs)) {
+            @mkdir($abs, 0755, true);
+        }
+        $unique = UploadConfig::generateUniqueFilename($uploadedFile->getClientOriginalName(), $dir);
+        $uploadedFile->move($abs, $unique);
+        $url = UploadConfig::getRelativeUrl($dir, $unique);
+        $education->setInstitutionImage($url);
+        $this->entityManager->flush();
+        return new JsonResponse(['success' => true, 'data' => ['logo_url' => $url]]);
+    }
+
+    #[Route('/{providerSlug}/articles/{articleSlug}', name: 'delete_article_by_provider_slug_and_article_slug', methods: ['DELETE'], requirements: ['providerSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*', 'articleSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*'])]
+    public function deleteArticleByProviderAndArticleSlug(string $providerSlug, string $articleSlug, Request $request): JsonResponse
+    {
+        $provider = $this->providerRepository->findBySlug($providerSlug);
+        if (!$provider) {
+            return new JsonResponse(['success' => false, 'error' => 'Provider not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $currentUser = $this->getUser();
+        if (!$currentUser || !($currentUser instanceof \App\Entity\Provider) || $currentUser->getId() !== $provider->getId()) {
+            return new JsonResponse(['success' => false, 'error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
+        }
+
+        $data = json_decode($request->getContent(), true) ?? [];
+        $currentPassword = (string)($data['currentPassword'] ?? '');
+        if ($currentPassword === '') {
+            return new JsonResponse(['success' => false, 'error' => 'currentPassword is required'], Response::HTTP_BAD_REQUEST);
+        }
+        if (!$this->passwordHasher->isPasswordValid($provider, $currentPassword)) {
+            return new JsonResponse(['success' => false, 'error' => 'Invalid password'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $articleRepo = $this->entityManager->getRepository(\App\Entity\Article::class);
+        $article = $articleRepo->createQueryBuilder('a')
+            ->innerJoin('a.provider', 'p')
+            ->andWhere('p = :provider AND a.slug = :slug')
+            ->setParameter('provider', $provider)
+            ->setParameter('slug', $articleSlug)
+            ->getQuery()
+            ->getOneOrNullResult();
+        if (!$article) {
+            return new JsonResponse(['success' => false, 'error' => 'Article not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->entityManager->remove($article);
+        $this->entityManager->flush();
+        return new JsonResponse(['success' => true, 'message' => 'Article deleted']);
+    }
     #[Route('/{providerSlug}/articles/{articleSlug}', name: 'update_article_by_provider_slug_and_article_slug', methods: ['PUT'], requirements: ['providerSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*', 'articleSlug' => '[A-Za-z0-9][A-Za-z0-9\-]*'])]
     public function updateArticleByProviderAndArticleSlug(string $providerSlug, string $articleSlug, Request $request): JsonResponse
     {

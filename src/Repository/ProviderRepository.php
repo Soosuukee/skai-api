@@ -95,6 +95,46 @@ class ProviderRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    public function findByCountrySlug(string $countrySlug): array
+    {
+        return $this->createQueryBuilder('p')
+            ->innerJoin('p.country', 'c')
+            ->andWhere('c.slug = :countrySlug')
+            ->setParameter('countrySlug', $countrySlug)
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findByLanguageSlug(string $languageSlug): array
+    {
+        return $this->createQueryBuilder('p')
+            ->innerJoin('p.languages', 'l')
+            ->andWhere('l.slug = :languageSlug')
+            ->setParameter('languageSlug', $languageSlug)
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findByHardSkillSlug(string $hardSkillSlug): array
+    {
+        return $this->createQueryBuilder('p')
+            ->innerJoin('p.hardSkills', 'hs')
+            ->andWhere('hs.slug = :hardSkillSlug')
+            ->setParameter('hardSkillSlug', $hardSkillSlug)
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findBySoftSkillSlug(string $softSkillSlug): array
+    {
+        return $this->createQueryBuilder('p')
+            ->innerJoin('p.softSkills', 'ss')
+            ->andWhere('ss.slug = :softSkillSlug')
+            ->setParameter('softSkillSlug', $softSkillSlug)
+            ->getQuery()
+            ->getResult();
+    }
+
     public function findByCountryName(string $countryName): array
     {
         return $this->createQueryBuilder('p')

@@ -29,9 +29,10 @@ class SoftSkillController extends AbstractController
     {
         $softSkills = $this->softSkillRepository->findAll();
 
+        $json = $this->serializer->serialize($softSkills, 'json', ['groups' => ['softskill:read']]);
         return new JsonResponse([
             'success' => true,
-            'data' => $softSkills,
+            'data' => json_decode($json, true),
             'total' => count($softSkills)
         ]);
     }
@@ -48,9 +49,10 @@ class SoftSkillController extends AbstractController
             ], Response::HTTP_NOT_FOUND);
         }
 
+        $json = $this->serializer->serialize($softSkill, 'json', ['groups' => ['softskill:read']]);
         return new JsonResponse([
             'success' => true,
-            'data' => $softSkill
+            'data' => json_decode($json, true)
         ]);
     }
 }

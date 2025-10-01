@@ -10,7 +10,6 @@ services:
       - "../src/Entity/"
       - "../src/Kernel.php"
 
-  # Use Lexik JWT manager in AuthService (no JWT_SECRET needed)
   App\Service\AuthService:
     arguments:
       $jwtManager: "@lexik_jwt_authentication.jwt_manager"
